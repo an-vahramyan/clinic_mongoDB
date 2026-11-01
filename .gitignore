@@ -1,0 +1,6 @@
+# MongoDB database files
+clinic/mongo-lab/data/db/
+clinic/mongo-lab/logs/
+
+# Environment variables
+.env
