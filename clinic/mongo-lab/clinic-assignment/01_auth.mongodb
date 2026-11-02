@@ -1,0 +1,216 @@
+// ============================================================
+// TASK 1 — MongoDB Authentication
+// ============================================================
+
+
+// ------------------------------------------------------------
+// STEP 3 — Create the administrative user
+// ------------------------------------------------------------
+
+use admin;
+
+db.createUser({
+  user: "admin",
+  pwd: passwordPrompt(),
+  roles: [
+    { role: "userAdminAnyDatabase", db: "admin" },
+    { role: "readWriteAnyDatabase", db: "admin" },
+  ],
+});
+
+/*
+Results:
+
+Authorization disabled:
+- Switched to database admin.
+- User created successfully: { ok: 1 }
+
+Authorization enabled:
+- Switched to database admin.
+- MongoServerError[Unauthorized]:
+  Command createUser requires authentication.
+
+A user cannot be created without authentication when
+authorization is enabled, except through MongoDB's localhost exception.
+*/
+
+
+// ------------------------------------------------------------
+// STEP 5 — Verify administrative authentication
+// ------------------------------------------------------------
+
+db.runCommand({ connectionStatus: 1, showPrivileges: true });
+
+/*
+Result:
+
+Authenticated successfully as admin.
+
+authenticatedUsers:
+- user: admin
+  db: admin
+
+authenticatedUserRoles:
+- readWriteAnyDatabase (admin)
+- userAdminAnyDatabase (admin)
+
+ok: 1
+*/
+
+
+// ------------------------------------------------------------
+// STEP 6 — Create users with specific SCRAM mechanisms
+// ------------------------------------------------------------
+
+db.createUser({
+  user: "mechSha256",
+  pwd: passwordPrompt(),
+  roles: [{ role: "readWrite", db: "clinic" }],
+  mechanisms: ["SCRAM-SHA-256"],
+});
+
+// Result: { ok: 1 }
+
+db.createUser({
+  user: "mechSha1",
+  pwd: passwordPrompt(),
+  roles: [{ role: "readWrite", db: "clinic" }],
+  mechanisms: ["SCRAM-SHA-1"],
+});
+
+// Result: { ok: 1 }
+
+
+/*
+Authentication test results:
+
+User: mechSha256
+- No mechanism specified: SUCCESS
+- SCRAM-SHA-1: FAILED
+- SCRAM-SHA-256: SUCCESS
+
+User: mechSha1
+- No mechanism specified: FAILED
+- SCRAM-SHA-1: SUCCESS
+- SCRAM-SHA-256: FAILED
+
+
+Observations:
+
+- mechSha256 supports only SCRAM-SHA-256 authentication.
+- mechSha1 supports only SCRAM-SHA-1 authentication.
+
+When authMechanism is not explicitly specified,
+mongosh attempts SCRAM-SHA-256 authentication by default
+in these tests.
+
+Therefore, mechSha256 authentication succeeds,
+while mechSha1 authentication fails.
+
+Explicitly selecting the mechanism supported by the user
+results in successful authentication.
+Selecting an unsupported mechanism results in authentication failure.
+*/
+
+
+// ------------------------------------------------------------
+// STEP 7 — Check server-supported authentication mechanisms
+// ------------------------------------------------------------
+
+db.adminCommand({
+  getParameter: 1,
+  authenticationMechanisms: 1,
+});
+
+/*
+Result:
+
+{
+  authenticationMechanisms: [
+    'MONGODB-X509',
+    'SCRAM-SHA-1',
+    'SCRAM-SHA-256'
+  ],
+  ok: 1
+}
+*/
+
+
+// ------------------------------------------------------------
+// STEP 8 — Connect with an incorrect authSource
+// ------------------------------------------------------------
+
+/*
+Connection:
+- Username: mechSha256
+- Authentication database (authSource): admin
+- Target database: clinic
+
+Result:
+
+MongoServerError: Authentication failed.
+
+Explanation:
+The mechSha256 user was created in the clinic database.
+However, authSource was set to admin, so MongoDB searched
+for the user in the admin database instead.
+*/
+
+
+// ============================================================
+// WRITTEN QUESTIONS
+// ============================================================
+
+
+// 1. Why must the first user be created before authorization
+//    is enabled?
+
+/*
+Creating the first administrative user before enabling authorization
+ensures that an administrator can authenticate after access control
+is enabled.
+
+MongoDB also provides a localhost exception, which allows the first
+user to be created from localhost when no users or roles exist.
+This exception is disabled after the first user is created.
+*/
+
+
+// 2. What does authSource specify, and why did step 8 fail?
+
+/*
+authSource specifies the database where MongoDB looks for the
+user's credentials.
+
+The mechSha256 user was created in the clinic database.
+In step 8, authSource was set to admin, so MongoDB searched for
+the user in the admin database instead, resulting in
+Authentication failed.
+*/
+
+
+// 3. What happened when authMechanism was not explicitly specified?
+
+/*
+In my tests, mongosh attempted SCRAM-SHA-256 when no authentication
+mechanism was explicitly specified.
+
+Therefore, mechSha256 authenticated successfully, while mechSha1 failed.
+
+Explicitly selecting the mechanism supported by the user resulted
+in successful authentication, while selecting an unsupported
+mechanism resulted in authentication failure.
+*/
+
+
+// 4. Why is bindIp: 0.0.0.0 dangerous when authorization is disabled?
+
+/*
+bindIp: 0.0.0.0 makes MongoDB listen on all available network interfaces.
+
+If authorization is disabled, anyone who can reach the server
+over the network may access and modify the database without
+providing credentials.
+
+This creates a serious security risk.
+*/
