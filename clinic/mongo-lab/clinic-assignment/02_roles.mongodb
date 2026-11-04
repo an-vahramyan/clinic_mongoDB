@@ -1,2 +1,367 @@
-// Task 2: Database users, roles, and the permission matrix
+// ============================================================
+// TASK 2: DATABASE USERS, ROLES, AND PERMISSION MATRIX
 // Date: 2026-11-02
+// Database: clinic
+// ============================================================
+
+use("clinic");
+
+// ============================================================
+// 1. DATABASE PREPARATION
+// ============================================================
+
+// Create the required collections.
+
+// db.createCollection("users");
+// db.createCollection("appointments");
+
+// Insert a test document into users.
+
+// db.users.insertOne({
+//   name: "Matrix Test",
+//   email: "matrix@example.com",
+//   role: "admin",
+//   active: true,
+// });
+
+// ============================================================
+// 2. CUSTOM ROLE DEFINITION
+// Role: frontdesk
+// ============================================================
+
+// Permissions:
+// users: find, insert, update
+// appointments: find, insert, update
+
+// db.runCommand({
+//   createRole: "frontdesk",
+//   privileges: [
+//     {
+//       resource: { db: "clinic", collection: "users" },
+//       actions: ["find", "update", "insert"],
+//     },
+//     {
+//       resource: { db: "clinic", collection: "appointments" },
+//       actions: ["find", "update", "insert"],
+//     },
+//   ],
+//   roles: [],
+// });
+
+// ============================================================
+// 3. DATABASE USER CREATION
+// ============================================================
+
+// clinicApp — built-in role: readWrite
+
+// db.createUser({
+//   user: "clinicApp",
+//   pwd: "tmp_pswrd",
+//   roles: [{ role: "readWrite", db: "clinic" }],
+// });
+
+// auditor — built-in role: read
+
+// db.createUser({
+//   user: "auditor",
+//   pwd: "tmp_pswrd",
+//   roles: [{ role: "read", db: "clinic" }],
+// });
+
+// reception — custom role: frontdesk
+
+// db.createUser({
+//   user: "reception",
+//   pwd: "tmp_pswrd",
+//   roles: [{ role: "frontdesk", db: "clinic" }],
+// });
+
+// ============================================================
+// 4. PERMISSION MATRIX — PREDICTIONS
+// ============================================================
+//
+// Operation                  clinicApp   auditor   reception
+//
+// A. Find one user            Yes         Yes       Yes
+// B. Insert appointment       Yes         No        Yes
+// C. Update user              Yes         No        Yes
+// D. Delete appointment       Yes         No        No
+// E. Create index             Yes         No        No
+// F. List collections         Yes         Yes       No
+//
+// ============================================================
+
+// ============================================================
+// 5. PERMISSION TESTS — RESULTS
+// ============================================================
+//
+// The same six operations were tested using all four connections.
+// The operation code is provided separately in Section 6.
+//
+// ------------------------------------------------------------
+// 5.1. LAB-APP
+// User: clinicApp
+// Role: readWrite
+// ------------------------------------------------------------
+//
+// A. Find one user             SUCCESS
+// B. Insert appointment        SUCCESS
+// C. Update user phone         SUCCESS
+// D. Delete appointment        SUCCESS
+// E. Create non-unique index   SUCCESS
+// F. List collection names     SUCCESS
+//
+// ------------------------------------------------------------
+// 5.2. LAB-AUDITOR
+// User: auditor
+// Role: read
+// ------------------------------------------------------------
+//
+// A. Find one user             SUCCESS
+// B. Insert appointment        DENIED
+// C. Update user phone         DENIED
+// D. Delete appointment        DENIED
+// E. Create non-unique index   DENIED
+// F. List collection names     SUCCESS
+//
+// ------------------------------------------------------------
+// 5.3. LAB-RECEPTION
+// User: reception
+// Role: frontdesk
+// ------------------------------------------------------------
+//
+// A. Find one user             SUCCESS
+// B. Insert appointment        SUCCESS
+// C. Update user phone         SUCCESS
+// D. Delete appointment        DENIED
+// E. Create non-unique index   DENIED
+// F. List collection names     DENIED
+//
+// ------------------------------------------------------------
+// 5.4. LAB-ADMIN
+// User: admin
+// Roles: readWriteAnyDatabase, userAdminAnyDatabase
+// ------------------------------------------------------------
+//
+// A. Find one user             SUCCESS
+// B. Insert appointment        SUCCESS
+// C. Update user phone         SUCCESS
+// D. Delete appointment        SUCCESS
+// E. Create non-unique index   SUCCESS
+// F. List collection names     SUCCESS
+//
+// ============================================================
+
+// ============================================================
+// 6. OPERATION CODE — COMMON FOR ALL CONNECTIONS
+// ============================================================
+//
+// Run each operation separately while connected to the
+// corresponding user and using the clinic database.
+//
+// A. FIND ONE USER
+//
+// db.users.findOne({ name: "Matrix Test" });
+//
+// B. INSERT APPOINTMENT
+//
+// db.appointments.insertOne({
+//   doctorId: new ObjectId(),
+//   patientId: new ObjectId(),
+//   start: new Date(),
+//   durationMin: 15,
+//   reason: "matrix test",
+//   status: "scheduled",
+//   fee: 0,
+// });
+
+// C. UPDATE USER PHONE NUMBER
+//
+// db.users.updateOne(
+//   { name: "Matrix Test" },
+//   { $set: { phone: "+37499858585" } },
+// );
+
+// D. DELETE APPOINTMENT
+//
+// db.appointments.deleteOne({ reason: "matrix test" });
+//
+// E. CREATE NON-UNIQUE INDEX ON users.email
+//
+// db.users.createIndex({ email: 1 });
+//
+// F. LIST COLLECTION NAMES
+//
+// db.getCollectionNames();
+//
+// ============================================================
+
+// ============================================================
+// 7. ACTUAL PERMISSION MATRIX
+// ============================================================
+//
+// Operation                  clinicApp   auditor   reception   admin
+//
+// A. Find one user            SUCCESS     SUCCESS   SUCCESS     SUCCESS
+// B. Insert appointment       SUCCESS     DENIED    SUCCESS     SUCCESS
+// C. Update user              SUCCESS     DENIED    SUCCESS     SUCCESS
+// D. Delete appointment       SUCCESS     DENIED    DENIED      SUCCESS
+// E. Create index             SUCCESS     DENIED    DENIED      SUCCESS
+// F. List collections         SUCCESS     SUCCESS   DENIED      SUCCESS
+//
+// ============================================================
+
+// ============================================================
+// 8. CLEANUP
+// ============================================================
+
+// Run as admin to remove remaining test appointments.  --- SUCCESS
+
+// db.appointments.deleteMany({ reason: "matrix test" });
+
+// ============================================================
+
+// ============================================================
+// 9. ROLE REVOKE AND GRANT TESTS
+// ============================================================
+//
+// ------------------------------------------------------------
+// 1. REVOKE readWrite
+// ------------------------------------------------------------
+//
+// Connection: lab-admin
+// User: admin
+//
+// Action:
+// Remove the readWrite role from clinicApp.
+//
+// db.revokeRolesFromUser("clinicApp", [
+//   { role: "readWrite", db: "clinic" },
+// ]);
+//
+// Result: SUCCESS
+//
+// ------------------------------------------------------------
+// 2. TEST INSERT AFTER REVOKING readWrite
+// ------------------------------------------------------------
+//
+// Connection: lab-app
+// User: clinicApp
+//
+// Action:
+// Insert appointment
+//
+// db.appointments.insertOne({
+//   doctorId: new ObjectId(),
+//   patientId: new ObjectId(),
+//   start: new Date(),
+//   durationMin: 15,
+//   reason: "matrix test",
+//   status: "scheduled",
+//   fee: 0,
+// });
+//
+// Result: DENIED
+//
+// ------------------------------------------------------------
+// 3. GRANT read ROLE
+// ------------------------------------------------------------
+//
+// Connection: lab-admin
+// User: admin
+//
+// Action:
+// Grant the built-in read role to clinicApp.
+//
+// db.grantRolesToUser("clinicApp", [
+//   { role: "read", db: "clinic" },
+// ]);
+
+// Result: SUCCESS
+//
+// ------------------------------------------------------------
+//  4. TEST FIND AFTER GRANTING read
+// ------------------------------------------------------------
+//
+// Connection: lab-app
+// User: clinicApp
+//
+//
+// Action:
+// Find one user
+//
+// db.users.findOne({ name: "Matrix Test" });
+
+// Result: SUCCESS
+//
+// ------------------------------------------------------------
+// 5. TEST INSERT AFTER GRANTING read
+// ------------------------------------------------------------
+//
+// Connection: lab-app
+// User: clinicApp
+//
+// Action:
+// Insert appointment
+//
+// db.appointments.insertOne({
+//   doctorId: new ObjectId(),
+//   patientId: new ObjectId(),
+//   start: new Date(),
+//   durationMin: 15,
+//   reason: "matrix test",
+//   status: "scheduled",
+//   fee: 0,
+// });
+// Result: DENIED
+// ============================================================
+
+// ============================================================
+// 10. WRITTEN ANSWERS
+// ============================================================
+
+// 1. Explain every denied operation and identify the missing
+//    privilege/action.
+// The operations returned different results because we assigned
+// different permissions to each role when creating the users.
+// For example, our custom frontdesk role had only find, update,
+// and insert permissions on the users and appointments collections.
+// Therefore, the receptionist could search for, update, and insert
+// documents, but could not delete documents or create indexes.
+// The clinicApp user also demonstrated how permissions change when
+// roles are revoked and granted. After removing readWrite, the user
+// could no longer insert documents. After granting read, the user
+// could read data but still could not insert documents.
+
+// 2. Explain any differences between predictions and actual
+//    results.
+// The differences between our predictions and actual results
+// occurred when authorization was disabled in the `mongod_lab.conf`
+//  configuration file.
+// After setting `authorization: enabled`, MongoDB started checking
+// each user's assigned roles and permissions before allowing database operations.
+// When authorization was disabled, MongoDB did not enforce role-based
+// access restrictions. As a result, users could perform database operations
+// even if their assigned roles did not grant them the required permissions.
+// After enabling authorization, the actual results matched our permission
+// matrix predictions.
+
+// 3. How can access to patients' allergies be restricted
+//    for frontdesk users?
+// We can restrict access to patients' allergies by storing sensitive information
+//  in a separate collection and assigning permissions to different users. For
+// example, frontdesk users can have access to general patient information, while
+// access to the collection containing allergies is granted only to authorized users.
+// Another option is to create a view that excludes sensitive fields.
+
+// 4. Explain the difference between a MongoDB database role
+//    and the "role" field in a doctor document.
+//They are different concepts. A MongoDB database role is a set of permissions that
+// can be assigned to one or more database users. Users assigned the same role
+// receive the permissions defined by that role.
+// In contrast, the `role` field in a doctor document is just a regular data
+//  field used to describe the doctor's position or function in the system.
+// It does not grant database permissions.
+// ============================================================
+// END OF TASK 2
+// ============================================================
