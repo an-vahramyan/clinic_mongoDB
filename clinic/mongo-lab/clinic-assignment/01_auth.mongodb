@@ -8,7 +8,7 @@
 // STEP 3 — Create the administrative user
 // ------------------------------------------------------------
 
-use admin;
+use ("admin");
 
 db.createUser({
   user: "admin",
