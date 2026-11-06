@@ -1,0 +1,896 @@
+// ============================================================
+// TASK 3:
+// Date: 2026-11-04
+// Database: clinic
+// ============================================================
+use("clinic");
+
+// ------------------------------------------------------------
+// 1: COLLECTION CLEANUP
+// Remove existing collections before recreating them
+// Only users and appointments are recreated
+// ------------------------------------------------------------
+// db.users.drop();
+// db.appointments.drop();
+// db.scratch_appointments.drop();
+// db.getCollectionNames();
+
+// ------------------------------------------------------------
+// 2: CREATE USERS COLLECTION WITH SCHEMA VALIDATION
+// ------------------------------------------------------------
+
+// Define document structure and validation rules using $jsonSchema.
+// Enforce required fields, data types, string constraints,
+// role-specific nested documents, and additional properties.
+
+// db.createCollection("users", {
+//   validator: {
+//     $jsonSchema: {
+//       bsonType: "object",
+//       title: "Users Object Validation",
+//       required: ["name", "email", "role", "active"],
+//       properties: {
+//         _id: {
+//           bsonType: "objectId",
+//         },
+//         name: {
+//           bsonType: "string",
+//           minLength: 2,
+//           maxLength: 80,
+//           description: "'name' must be a string and is required",
+//         },
+//         email: {
+//           bsonType: "string",
+//           pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
+//           description: "'email' must be a string and is required",
+//         },
+//         role: {
+//           bsonType: "string",
+//           description: "'role' must be a string and is required",
+//           enum: ["doctor", "patient", "admin"],
+//         },
+//         active: {
+//           bsonType: "bool",
+//           description: "'active' must be a boolean and is required",
+//         },
+//         phone: {
+//           bsonType: "string",
+//           minLength: 7,
+//           maxLength: 20,
+//           pattern: "^[0-9+()\\s-]+$",
+//         },
+//         createdAt: {
+//           bsonType: "date",
+//         },
+//         doctor: {
+//           bsonType: "object",
+//           required: ["licenseNo", "specialty"],
+//           additionalProperties: false,
+//           properties: {
+//             licenseNo: {
+//               bsonType: "string",
+//               pattern: "^MD-\\d{4}$",
+//               description: "'licenseNo' is required",
+//             },
+//             specialty: {
+//               bsonType: "string",
+//               description: "specialty is required",
+//             },
+//           },
+//         },
+//         patient: {
+//           bsonType: "object",
+//           required: ["birthDate"],
+//           additionalProperties: false,
+//           properties: {
+//             allergies: {
+//               bsonType: "array",
+//               uniqueItems: true,
+//               items: {
+//                 bsonType: "string",
+//               },
+//             },
+//             birthDate: {
+//               bsonType: "date",
+//               description: "birth date is required",
+//             },
+//             bloodType: {
+//               bsonType: "string",
+//               enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
+//               description: "blood type must be one of the allowed values",
+//             },
+//           },
+//         },
+//       },
+//       oneOf: [
+//         {
+//           properties: {
+//             role: {
+//               enum: ["doctor"],
+//             },
+//           },
+//           required: ["doctor"],
+//           not: {
+//             required: ["patient"],
+//           },
+//         },
+//         {
+//           properties: {
+//             role: {
+//               enum: ["patient"],
+//             },
+//           },
+//           required: ["patient"],
+//           not: {
+//             required: ["doctor"],
+//           },
+//         },
+//         {
+//           properties: {
+//             role: {
+//               enum: ["admin"],
+//             },
+//           },
+//           not: {
+//             anyOf: [{ required: ["doctor"] }, { required: ["patient"] }],
+//           },
+//         },
+//       ],
+//       additionalProperties: false,
+//     },
+//   },
+//   validationLevel: "strict",
+//   validationAction: "error",
+// });
+
+//Result
+// { ok: 1 }
+
+// ------------------------------------------------------------
+// CREATE APPOINTMENTS COLLECTION WITH SCHEMA VALIDATION
+// ------------------------------------------------------------
+
+// db.createCollection("appointments", {
+//   validator: {
+//     $jsonSchema: {
+//       bsonType: "object",
+//       title: "Appointments Object Validation",
+//       required: [
+//         "doctorId",
+//         "patientId",
+//         "start",
+//         "durationMin",
+//         "reason",
+//         "status",
+//         "fee",
+//       ],
+//       properties: {
+//         _id: {
+//           bsonType: "objectId",
+//         },
+//         doctorId: {
+//           bsonType: "objectId",
+//         },
+//         patientId: {
+//           bsonType: "objectId",
+//         },
+//         start: {
+//           bsonType: "date",
+//         },
+//         durationMin: {
+//           bsonType: ["int", "long", "double", "decimal"],
+//           minimum: 5,
+//           maximum: 240,
+//         },
+//         reason: {
+//           bsonType: "string",
+//           minLength: 3,
+//           maxLength: 200,
+//         },
+//         status: {
+//           bsonType: "string",
+//           enum: ["scheduled", "completed", "cancelled"],
+//         },
+//         fee: {
+//           bsonType: ["int", "long", "double", "decimal"],
+//           minimum: 0,
+//         },
+//         notes: {
+//           bsonType: "string",
+//         },
+//         prescriptions: {
+//           bsonType: "array",
+//           maxItems: 10,
+//           items: {
+//             bsonType: "object",
+//             required: ["drug", "dose", "days"],
+//             additionalProperties: false,
+//             properties: {
+//               drug: {
+//                 bsonType: "string",
+//               },
+//               dose: {
+//                 bsonType: "string",
+//               },
+//               days: {
+//                 bsonType: ["int", "long", "double", "decimal"],
+//                 minimum: 1,
+//                 maximum: 365,
+//               },
+//             },
+//           },
+//         },
+//       },
+//       additionalProperties: false,
+//     },
+//   },
+//   validationLevel: "strict",
+//   validationAction: "error",
+// });
+
+//Result
+// { ok: 1 }
+
+// ------------------------------------------------------------
+// 3: INSPECT COLLECTION VALIDATION SETTINGS
+// Verify that the validator and validation options were applied
+// ------------------------------------------------------------
+
+// printjson({
+//   validationLevel: db.getCollectionInfos({ name: "users" })[0].options.validationLevel,
+//   validationAction: db.getCollectionInfos({ name: "users" })[0].options.validationAction,
+// });
+
+//Result
+// { validationLevel: 'strict', validationAction: 'error' }
+
+// ------------------------------------------------------------
+// 4: VALIDATION TESTS
+// Test valid and invalid documents against the validators
+// ------------------------------------------------------------
+
+// ------------------------------------------------------------
+// 4.1: VALID DOCUMENTS
+// Insert one document for each supported user role
+// ------------------------------------------------------------
+
+// ADMIN
+// db.users.insertOne({
+//   name: "Matrix test",
+//   email: "matrixtest@gmail.com",
+//   role: "admin",
+//   active: true,
+// });
+
+//Result
+// {
+//   acknowledged: true,
+//   insertedId: ObjectId('...')
+// }
+
+// DOCTOR
+// db.users.insertOne({
+//   name: "Doctor test",
+//   email: "doctor123@gmail.com",
+//   role: "doctor",
+//   active: true,
+//   doctor: {
+//     licenseNo: "MD-1234",
+//     specialty: "cardiology",
+//   },
+// });
+
+//Result
+// {
+//   acknowledged: true,
+//   insertedId: ObjectId('...')
+// }
+
+// PATIENT
+// db.users.insertOne({
+//   name: "Patient test",
+//   email: "patient123@gmail.com",
+//   role: "patient",
+//   active: true,
+//   patient: {
+//     birthDate: new Date("1995-05-15T00:00:00Z"),
+//     allergies: ["Pollen", "Penicillin"],
+//   },
+// });
+
+//Result
+// {
+//   acknowledged: true,
+//   insertedId: ObjectId('...')
+// }
+
+// ------------------------------------------------------------
+// VALID APPOINTMENT
+// Appointment with a valid prescription
+// ------------------------------------------------------------
+
+// db.appointments.insertOne({
+//   doctorId: new ObjectId(),
+//   patientId: new ObjectId(),
+//   start: new Date("2025-02-03T09:00:00Z"),
+//   durationMin: 30,
+//   reason: "Chest pain follow-up",
+//   status: "scheduled",
+//   fee: 100,
+//   notes: "Initial consultation",
+//   prescriptions: [
+//     {
+//       drug: "atenolol",
+//       dose: "25mg",
+//       days: 30,
+//     },
+//   ],
+// });
+
+//Result
+// {
+//   acknowledged: true,
+//   insertedId: ObjectId('...')
+// }
+
+// ------------------------------------------------------------
+// 4.2: INVALID DOCUMENTS
+// Each test intentionally violates one validation rule
+// ------------------------------------------------------------
+
+// Helper function: capture validation errors
+function testInvalidInsert(testName, insertOperation) {
+  try {
+    insertOperation();
+
+    return {
+      test: testName,
+      result: "Document unexpectedly accepted",
+    };
+  } catch (error) {
+    return {
+      test: testName,
+      result: "Validation rejected the document",
+      error: error.message,
+    };
+  }
+}
+
+// ------------------------------------------------------------
+// REQUIRED 10 TESTS FROM THE ASSIGNMENT
+// ------------------------------------------------------------
+
+// TEST 1: Missing required field
+// Rule: "active" is required
+
+// printjson(
+//   testInvalidInsert("01 - Missing required field", () =>
+//     db.users.insertOne({
+//       name: "Invalid Admin",
+//       email: "invalid1@gmail.com",
+//       role: "admin",
+//     })
+//   )
+// );
+
+//Result
+// {
+//   test: '01 - Missing required field',
+//   result: 'Validation rejected the document',
+//   error: 'Document failed validation'
+// }
+
+// TEST 2: Wrong type
+// Rule: appointments.start must be a date
+
+// printjson(
+//   testInvalidInsert("02 - Wrong type", () =>
+//     db.appointments.insertOne({
+//       doctorId: new ObjectId(),
+//       patientId: new ObjectId(),
+//       start: "2025-02-03T09:00:00Z",
+//       durationMin: 30,
+//       reason: "Regular checkup",
+//       status: "scheduled",
+//       fee: 100,
+//     })
+//   )
+// );
+
+//Result
+// {
+//   test: '02 - Wrong type',
+//   result: 'Validation rejected the document',
+//   error: 'Document failed validation'
+// }
+
+// TEST 3: Invalid enum value
+// Rule: role must be doctor, patient, or admin
+
+// printjson(
+//   testInvalidInsert("03 - Invalid enum value", () =>
+//     db.users.insertOne({
+//       name: "Invalid Role",
+//       email: "invalid3@gmail.com",
+//       role: "nurse",
+//       active: true,
+//     })
+//   )
+// );
+
+//Result
+// {
+//   test: '03 - Invalid enum value',
+//   result: 'Validation rejected the document',
+//   error: 'Document failed validation'
+// }
+
+// TEST 4: Number out of range
+// Rule: durationMin must be between 5 and 240
+
+// printjson(
+//   testInvalidInsert("04 - Number out of range", () =>
+//     db.appointments.insertOne({
+//       doctorId: new ObjectId(),
+//       patientId: new ObjectId(),
+//       start: new Date(),
+//       durationMin: 0,
+//       reason: "Regular checkup",
+//       status: "scheduled",
+//       fee: 100,
+//     })
+//   )
+// );
+
+//Result
+// {
+//   test: '04 - Number out of range',
+//   result: 'Validation rejected the document',
+//   error: 'Document failed validation'
+// }
+
+// TEST 5: Invalid email pattern
+// Rule: email must match the required email pattern
+
+// printjson(
+//   testInvalidInsert("05 - Invalid email pattern", () =>
+//     db.users.insertOne({
+//       name: "Invalid Email",
+//       email: "invalid-email",
+//       role: "admin",
+//       active: true,
+//     })
+//   )
+// );
+
+//Result
+// {
+//   test: '05 - Invalid email pattern',
+//   result: 'Validation rejected the document',
+//   error: 'Document failed validation'
+// }
+
+// TEST 6: Additional property
+// Rule: undefined fields are forbidden
+
+// printjson(
+//   testInvalidInsert("06 - Additional property", () =>
+//     db.users.insertOne({
+//       name: "Extra Field",
+//       email: "invalid6@gmail.com",
+//       role: "admin",
+//       active: true,
+//       address: "Yerevan",
+//     })
+//   )
+// );
+
+//Result
+// {
+//   test: '06 - Additional property',
+//   result: 'Validation rejected the document',
+//   error: 'Document failed validation'
+// }
+
+// TEST 7: Invalid array item
+// Rule: each prescription requires drug, dose, and days
+
+// printjson(
+//   testInvalidInsert("07 - Missing prescription days", () =>
+//     db.appointments.insertOne({
+//       doctorId: new ObjectId(),
+//       patientId: new ObjectId(),
+//       start: new Date(),
+//       durationMin: 30,
+//       reason: "Regular checkup",
+//       status: "scheduled",
+//       fee: 100,
+//       prescriptions: [
+//         {
+//           drug: "atenolol",
+//           dose: "25mg",
+//         },
+//       ],
+//     })
+//   )
+// );
+
+//Result
+// {
+//   test: '07 - Missing prescription days',
+//   result: 'Validation rejected the document',
+//   error: 'Document failed validation'
+// }
+
+// TEST 8: Null where number is required
+// Rule: fee must be a number
+
+// printjson(
+//   testInvalidInsert("08 - Null fee", () =>
+//     db.appointments.insertOne({
+//       doctorId: new ObjectId(),
+//       patientId: new ObjectId(),
+//       start: new Date(),
+//       durationMin: 30,
+//       reason: "Regular checkup",
+//       status: "scheduled",
+//       fee: null,
+//     })
+//   )
+// );
+
+//Result
+// {
+//   test: '08 - Null fee',
+//   result: 'Validation rejected the document',
+//   error: 'Document failed validation'
+// }
+
+// TEST 9: Doctor without doctor subdocument
+// Rule: doctor role requires doctor
+
+// printjson(
+//   testInvalidInsert("09 - Missing doctor subdocument", () =>
+//     db.users.insertOne({
+//       name: "Missing Doctor",
+//       email: "invalid9@gmail.com",
+//       role: "doctor",
+//       active: true,
+//     })
+//   )
+// );
+
+//Result
+// {
+//   test: '09 - Missing doctor subdocument',
+//   result: 'Validation rejected the document',
+//   error: 'Document failed validation'
+// }
+
+// TEST 10: Patient with incompatible doctor subdocument
+// Rule: patient cannot contain doctor
+
+// printjson(
+//   testInvalidInsert("10 - Incompatible subdocument", () =>
+//     db.users.insertOne({
+//       name: "Invalid Patient",
+//       email: "invalid10@gmail.com",
+//       role: "patient",
+//       active: true,
+//       patient: {
+//         birthDate: new Date("1995-05-15T00:00:00Z"),
+//       },
+//       doctor: {
+//         licenseNo: "MD-1234",
+//         specialty: "cardiology",
+//       },
+//     })
+//   )
+// );
+
+//Result
+// {
+//   test: '10 - Incompatible subdocument',
+//   result: 'Validation rejected the document',
+//   error: 'Document failed validation'
+// }
+
+// ------------------------------------------------------------
+// 5: SCRATCH MIGRATION
+// moderate/warn -> check -> fix -> strict/error
+// ------------------------------------------------------------
+
+// Stop if scratch_appointments is left over from a previous
+// unfinished run (it is not dropped automatically)
+// if (db.getCollectionNames().includes("scratch_appointments")) {
+//   throw new Error(
+//     "scratch_appointments already exists from a previous run - drop it manually and run again",
+//   );
+// }
+
+// Create the collection without a validator
+// db.createCollection("scratch_appointments");
+
+//Result
+// { ok: 1 }
+
+// Insert three documents: one valid, one with status 'done', one with fee -5
+// db.scratch_appointments.insertMany([
+//   {
+//     doctorId: new ObjectId(),
+//     patientId: new ObjectId(),
+//     start: new Date("2025-03-01T10:00:00Z"),
+//     durationMin: 30,
+//     reason: "Valid visit",
+//     status: "scheduled",
+//     fee: 50,
+//   },
+//   {
+//     doctorId: new ObjectId(),
+//     patientId: new ObjectId(),
+//     start: new Date("2025-03-02T10:00:00Z"),
+//     durationMin: 30,
+//     reason: "Bad status",
+//     status: "done",
+//     fee: 50,
+//   },
+//   {
+//     doctorId: new ObjectId(),
+//     patientId: new ObjectId(),
+//     start: new Date("2025-03-03T10:00:00Z"),
+//     durationMin: 30,
+//     reason: "Bad fee",
+//     status: "scheduled",
+//     fee: -5,
+//   },
+// ]);
+
+//Result
+// {
+//   acknowledged: true,
+//   insertedIds: {
+//     '0': ObjectId('6aed9b26d09a88cf9bd425c3'),
+//     '1': ObjectId('6aed9b26d09a88cf9bd425c4'),
+//     '2': ObjectId('6aed9b26d09a88cf9bd425c5')
+//   }
+// }
+
+// Add a validator with collMod: level moderate, action warn
+// db.runCommand({
+//   collMod: "scratch_appointments",
+//   validator: {
+//     $jsonSchema: {
+//       bsonType: "object",
+//       properties: {
+//         status: {
+//           enum: ["scheduled", "completed", "cancelled"],
+//         },
+//         fee: {
+//           bsonType: ["int", "long", "double", "decimal"],
+//           minimum: 0,
+//         },
+//       },
+//     },
+//   },
+//   validationLevel: "moderate",
+//   validationAction: "warn",
+// });
+
+//Result
+// {
+//   ok: NumberInt('1')
+// }
+
+// Insert another bad appointment
+// db.scratch_appointments.insertOne({
+//   doctorId: new ObjectId(),
+//   patientId: new ObjectId(),
+//   start: new Date(),
+//   durationMin: 30,
+//   reason: "New bad one",
+//   status: "done",
+//   fee: -10,
+// });
+
+//Result
+// {
+//   acknowledged: true,
+//   insertedId: ObjectId('6aed9b74dd6979023c4ecdbd')
+// }
+// What happens: the document is accepted, because the action is "warn".
+// MongoDB only writes a warning to the server log instead of rejecting it.
+
+// Update one of the old bad documents (change its reason)
+// db.scratch_appointments.updateOne(
+//   { reason: "Bad status" },
+//   { $set: { reason: "Bad status (edited)" } },
+// );
+
+//Result
+// {
+//   acknowledged: true,
+//   insertedId: null,
+//   matchedCount: NumberInt('1'),
+//   modifiedCount: NumberInt('1'),
+//   upsertedCount: NumberInt('0')
+// }
+
+// What happens: the update succeeds. With level "moderate" MongoDB does not
+// check updates to documents that were already invalid before the validator
+// was added, and "warn" would not block the write anyway.
+
+// List every document that violates the rules ($nor + $jsonSchema)
+// db.scratch_appointments
+//   .find({
+//     $nor: [
+//       {
+//         $jsonSchema: {
+//           bsonType: "object",
+//           properties: {
+//             status: {
+//               enum: ["scheduled", "completed", "cancelled"],
+//             },
+//             fee: {
+//               bsonType: ["int", "long", "double", "decimal"],
+//               minimum: 0,
+//             },
+//           },
+//         },
+//       },
+//     ],
+//   })
+//   .toArray();
+
+//Result
+// [
+//   {
+//     _id: ObjectId('6aed9b26d09a88cf9bd425c4'),
+//     doctorId: ObjectId('6aed9b26d09a88cf9bd425bf'),
+//     patientId: ObjectId('6aed9b26d09a88cf9bd425c0'),
+//     start: ISODate('2025-03-02T10:00:00.000Z'),
+//     durationMin: NumberInt('30'),
+//     reason: 'Bad status (edited)',
+//     status: 'done',
+//     fee: NumberInt('50')
+//   },
+//   {
+//     _id: ObjectId('6aed9b26d09a88cf9bd425c5'),
+//     doctorId: ObjectId('6aed9b26d09a88cf9bd425c1'),
+//     patientId: ObjectId('6aed9b26d09a88cf9bd425c2'),
+//     start: ISODate('2025-03-03T10:00:00.000Z'),
+//     durationMin: NumberInt('30'),
+//     reason: 'Bad fee',
+//     status: 'scheduled',
+//     fee: NumberInt('-5')
+//   },
+//   {
+//     _id: ObjectId('6aed9b74dd6979023c4ecdbd'),
+//     doctorId: ObjectId('6aed9b74dd6979023c4ecdbb'),
+//     patientId: ObjectId('6aed9b74dd6979023c4ecdbc'),
+//     start: ISODate('2026-11-06T09:18:44.688Z'),
+//     durationMin: NumberInt('30'),
+//     reason: 'New bad one',
+//     status: 'done',
+//     fee: NumberInt('-10')
+//   }
+// ]
+
+// Fix the violators, switch to strict + error, repeat the bad insert
+// db.scratch_appointments.updateMany(
+//   { status: { $nin: ["scheduled", "completed", "cancelled"] } },
+//   { $set: { status: "completed" } }
+// );
+
+//Result
+// {
+//   acknowledged: true,
+//   insertedId: null,
+//   matchedCount: NumberInt('2'),
+//   modifiedCount: NumberInt('2'),
+//   upsertedCount: NumberInt('0')
+// }
+
+// db.scratch_appointments.updateMany(
+//   { fee: { $lt: 0 } },
+//   { $set: { fee: 0 } }
+// );
+//Result
+// {
+//   acknowledged: true,
+//   insertedId: null,
+//   matchedCount: NumberInt('0'),
+//   modifiedCount: NumberInt('0'),
+//   upsertedCount: NumberInt('0')
+// }
+
+// db.runCommand({
+//   collMod: "scratch_appointments",
+//   validationLevel: "strict",
+//   validationAction: "error",
+// });
+
+//Result
+// {
+//   ok: NumberInt('1')
+// }
+
+// printjson(
+//   testInvalidInsert("Scratch - bad insert after strict/error", () =>
+//     db.scratch_appointments.insertOne({
+//       doctorId: new ObjectId(),
+//       patientId: new ObjectId(),
+//       start: new Date(),
+//       durationMin: 30,
+//       reason: "New bad one",
+//       status: "done",
+//       fee: -10,
+//     })
+//   )
+// );
+
+//Result
+// {
+//   test: 'Scratch - bad insert after strict/error',
+//   result: 'Validation rejected the document',
+//   error: 'Document failed validation'
+// }
+
+// What happens: the same insert is now rejected, because the action is "error".
+
+// Drop scratch_appointments
+// db.scratch_appointments.drop();
+
+//Result
+//true
+// ------------------------------------------------------------
+// WRITTEN ANSWERS
+// ------------------------------------------------------------
+
+// Q1: Name two rules in this project that a validator cannot express.
+// A validator only looks at one document at a time, so it cannot check that
+// doctorId points to a user that really exists and has the role "doctor"
+// (or that patientId points to a patient). It also cannot make email unique
+// across all users - that needs a unique index, not a validator.
+
+// Q2: What is the difference between validationLevel strict and moderate,
+// and when would you start with moderate?
+// "strict" checks every insert and every update. "moderate" checks inserts
+// and updates of documents that are already valid, but skips updates of old
+// documents that already break the rules. I would start with moderate when
+// adding a validator to a collection that already has old data, so the app
+// keeps working while the old documents are found and fixed.
+
+// ------------------------------------------------------------
+// CLEANUP
+// Delete accepted test documents
+// ------------------------------------------------------------
+
+// db.users.deleteMany({
+//   email: {
+//     $in: [
+//       "matrixtest@gmail.com",
+//       "doctor123@gmail.com",
+//       "patient123@gmail.com",
+//     ],
+//   },
+// });
+
+//Result
+// {
+//   acknowledged: true,
+//   deletedCount: NumberInt('3')
+// }
+
+// db.appointments.deleteMany({
+//   reason: "Chest pain follow-up",
+//   notes: "Initial consultation",
+// });
+
+//Result
+// {
+//   acknowledged: true,
+//   deletedCount: NumberInt('1')
+// }
+// ============================================================
+// END OF VALIDATION TESTS
+// ============================================================
