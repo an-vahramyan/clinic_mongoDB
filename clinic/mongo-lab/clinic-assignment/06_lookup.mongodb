@@ -1,0 +1,516 @@
+// ============================================================
+// TASK 5 — RELATIONS WITH $LOOKUP
+// Name: Anush Vahramyan
+// Date: 2026-11-07
+// Database: clinic
+// File: 06_lookup.mongodb
+// ============================================================
+
+//===================================================
+// 0. DATABASE CONFIGURATION
+// ============================================================
+
+use("clinic");
+
+// ============================================================
+// L1. EVERY APPOINTMENT WITH DOCTOR AND PATIENT NAMES
+// ============================================================
+
+// db.appointments.aggregate([
+//   {
+//     $lookup: {
+//       from: "users",
+//       localField: "doctorId",
+//       foreignField: "_id",
+//       as: "doctor",
+//     },
+//   },
+//   {
+//     $lookup: {
+//       from: "users",
+//       localField: "patientId",
+//       foreignField: "_id",
+//       as: "patient",
+//     },
+//   },
+//   {
+//     $unwind: "$doctor",
+//   },
+//   {
+//     $unwind: "$patient",
+//   },
+//   {
+//     $project: {
+//       _id: 0,
+//       start: 1,
+//       doctor: "$doctor.name",
+//       patient: "$patient.name",
+//       reason: 1,
+//       status: 1,
+//     },
+//   },
+//   {
+//     $sort: {
+//       start: 1,
+//     },
+//   },
+// ]);
+
+// Result:
+// 9 documents.
+// First appointment:
+// doctor: "Dr. Elena Rossi"
+// patient: "Ana Costa"
+// reason: "Chest pain follow-up"
+// Results are sorted by start from earliest to latest.
+
+// ============================================================
+// L2. EVERY DOCTOR WITH APPOINTMENT COUNT
+// Include doctors with zero appointments.
+// ============================================================
+
+// db.users.aggregate([
+//   {
+//     $match: {
+//       role: "doctor",
+//     },
+//   },
+//   {
+//     $lookup: {
+//       from: "appointments",
+//       localField: "_id",
+//       foreignField: "doctorId",
+//       as: "appointmentsList",
+//     },
+//   },
+//   {
+//     $project: {
+//       _id: 0,
+//       doctor: "$name",
+//       appointments: {
+//         $size: "$appointmentsList",
+//       },
+//     },
+//   },
+//   {
+//     $sort: {
+//       appointments: -1,
+//       doctor: 1,
+//     },
+//   },
+// ]);
+
+// Result:
+// 3 documents:
+// Dr. Elena Rossi — 6 appointments
+// Dr. Hamid Karimi — 3 appointments
+// Dr. Sofia Lindqvist — 0 appointments
+//
+// Doctors with no appointments are also included.
+
+// ============================================================
+// L3. EVERY PATIENT WITH APPOINTMENT COUNT
+// Include patients with zero appointments.
+// ============================================================
+
+// db.users.aggregate([
+//   {
+//     $match: {
+//       role: "patient",
+//     },
+//   },
+//   {
+//     $lookup: {
+//       from: "appointments",
+//       localField: "_id",
+//       foreignField: "patientId",
+//       as: "appointmentsList",
+//     },
+//   },
+//   {
+//     $project: {
+//       _id: 0,
+//       patient: "$name",
+//       appointments: {
+//         $size: "$appointmentsList",
+//       },
+//     },
+//   },
+//   {
+//     $sort: {
+//       appointments: -1,
+//       patient: 1,
+//     },
+//   },
+// ]);
+
+// Result:
+// 5 documents:
+// Ana Costa — 3 appointments
+// Ben Okoye — 2 appointments
+// Clara Meyer — 2 appointments
+// Dmitri Volkov — 2 appointments
+// Eva Nilsson — 0 appointments
+//
+// Patients with no appointments are also included.
+
+// ============================================================
+// L4. COMPLETED APPOINTMENTS: REVENUE PER DOCTOR
+// Count completed appointments and calculate total fees.
+// ============================================================
+
+// db.appointments.aggregate([
+//   {
+//     $match: {
+//       status: "completed",
+//     },
+//   },
+//   {
+//     $group: {
+//       _id: "$doctorId",
+//       appointments: {
+//         $sum: 1,
+//       },
+//       revenue: {
+//         $sum: "$fee",
+//       },
+//     },
+//   },
+//   {
+//     $lookup: {
+//       from: "users",
+//       localField: "_id",
+//       foreignField: "_id",
+//       as: "doctor",
+//     },
+//   },
+//   {
+//     $unwind: "$doctor",
+//   },
+//   {
+//     $project: {
+//       _id: 0,
+//       doctor: "$doctor.name",
+//       appointments: 1,
+//       revenue: 1,
+//     },
+//   },
+//   {
+//     $sort: {
+//       revenue: -1,
+//     },
+//   },
+// ]);
+
+// Result:
+// 2 documents:
+// Dr. Elena Rossi — 3 completed appointments, revenue: 360
+// Dr. Hamid Karimi — 2 completed appointments, revenue: 140
+//
+// Only completed appointments are included.
+
+// ============================================================
+// L5. PATIENTS WHO HAVE NEVER HAD AN APPOINTMENT
+// ============================================================
+
+// db.users.aggregate([
+//   {
+//     $match: {
+//       role: "patient",
+//     },
+//   },
+//   {
+//     $lookup: {
+//       from: "appointments",
+//       localField: "_id",
+//       foreignField: "patientId",
+//       as: "appointmentsList",
+//     },
+//   },
+//   {
+//     $match: {
+//       appointmentsList: {
+//         $size: 0,
+//       },
+//     },
+//   },
+//   {
+//     $project: {
+//       _id: 0,
+//       name: 1,
+//       email: 1,
+//     },
+//   },
+// ]);
+
+// Result:
+// 1 document:
+// Eva Nilsson
+// eva.nilsson@example.com
+
+// ============================================================
+// L6. APPOINTMENT COUNT AND AVERAGE FEE PER SPECIALTY
+// Include every appointment except cancelled ones.
+// Round average fee to 2 decimal places.
+// ============================================================
+
+// db.appointments.aggregate([
+//   {
+//     $match: {
+//       status: {
+//         $ne: "cancelled",
+//       },
+//     },
+//   },
+//   {
+//     $lookup: {
+//       from: "users",
+//       localField: "doctorId",
+//       foreignField: "_id",
+//       as: "doctor",
+//     },
+//   },
+//   {
+//     $unwind: "$doctor",
+//   },
+//   {
+//     $group: {
+//       _id: "$doctor.doctor.specialty",
+//       appointments: {
+//         $sum: 1,
+//       },
+//       avgFee: {
+//         $avg: "$fee",
+//       },
+//     },
+//   },
+//   {
+//     $project: {
+//       _id: 0,
+//       specialty: "$_id",
+//       appointments: 1,
+//       avgFee: {
+//         $round: ["$avgFee", 2],
+//       },
+//     },
+//   },
+//   {
+//     $sort: {
+//       avgFee: -1,
+//     },
+//   },
+// ]);
+
+// Result:
+// 2 documents:
+// cardiology — 5 appointments, average fee: 110
+// pediatrics — 3 appointments, average fee: 70
+//
+// Cancelled appointments are excluded.
+// Doctors without appointments do not produce a group.
+
+// ============================================================
+// L7. BONUS — FIND INVALID DOCTOR REFERENCES
+// This section creates two deliberately incorrect appointments,
+// finds them with $lookup, and deletes them afterwards.
+// ============================================================
+
+// ------------------------------------------------------------
+// L7.0 CLEAN UP LEFTOVER BONUS DOCUMENTS
+// Makes this bonus section safe to run again.
+// ------------------------------------------------------------
+
+db.appointments.deleteMany({
+  reason: {
+    $in: [
+      "L7a - missing doctor reference",
+      "L7b - doctor points to patient",
+    ],
+  },
+});
+
+// Result:
+// deletedCount: 0 on the first run.
+// Any leftover bonus documents are removed on later runs.
+
+// ------------------------------------------------------------
+// L7.1 GET A PATIENT ID
+// This ID will be incorrectly used as a doctorId in L7b.
+// ------------------------------------------------------------
+
+var l7Patient = db.users.findOne(
+  { email: "ana.costa@example.com" },
+  { _id: 1 }
+);
+
+var l7PatientId = l7Patient._id;
+
+// ------------------------------------------------------------
+// L7.2 INSERT TWO INVALID APPOINTMENTS
+// Both documents satisfy the BSON type requirements,
+// but their doctor references are logically incorrect.
+// ------------------------------------------------------------
+
+var l7MissingDoctorId = new ObjectId();
+
+var l7InsertResult = db.appointments.insertMany([
+  {
+    doctorId: l7MissingDoctorId,
+    patientId: l7PatientId,
+    start: new Date("2025-05-01T09:00:00Z"),
+    durationMin: 15,
+    reason: "L7a - missing doctor reference",
+    status: "scheduled",
+    fee: 0,
+  },
+  {
+    doctorId: l7PatientId,
+    patientId: l7PatientId,
+    start: new Date("2025-05-01T10:00:00Z"),
+    durationMin: 15,
+    reason: "L7b - doctor points to patient",
+    status: "scheduled",
+    fee: 0,
+  },
+]);
+
+// Result:
+// 2 appointments inserted.
+
+// ------------------------------------------------------------
+// L7a. FIND APPOINTMENT WITH A NON-EXISTENT DOCTOR
+// The doctorId does not match any user in the users collection.
+// ------------------------------------------------------------
+
+// db.appointments.aggregate([
+//   {
+//     $match: {
+//       reason: "L7a - missing doctor reference",
+//     },
+//   },
+//   {
+//     $lookup: {
+//       from: "users",
+//       localField: "doctorId",
+//       foreignField: "_id",
+//       as: "doctor",
+//     },
+//   },
+//   {
+//     $match: {
+//       doctor: {
+//         $size: 0,
+//       },
+//     },
+//   },
+//   {
+//     $project: {
+//       _id: 0,
+//       reason: 1,
+//       doctorId: 1,
+//     },
+//   },
+// ]);
+
+// Result:
+// 1 document found.
+// The doctor array is empty because no user has this _id.
+
+// ------------------------------------------------------------
+// L7b. FIND APPOINTMENT WHERE DOCTOR ID BELONGS TO A PATIENT
+// The referenced user exists, but their role is "patient".
+// ------------------------------------------------------------
+
+// db.appointments.aggregate([
+//   {
+//     $match: {
+//       reason: "L7b - doctor points to patient",
+//     },
+//   },
+//   {
+//     $lookup: {
+//       from: "users",
+//       localField: "doctorId",
+//       foreignField: "_id",
+//       as: "doctor",
+//     },
+//   },
+//   {
+//     $unwind: "$doctor",
+//   },
+//   {
+//     $match: {
+//       "doctor.role": "patient",
+//     },
+//   },
+//   {
+//     $project: {
+//       _id: 0,
+//       reason: 1,
+//       doctor: "$doctor.name",
+//       doctorRole: "$doctor.role",
+//     },
+//   },
+// ]);
+
+// Result:
+// 1 document found.
+// doctor: "Ana Costa"
+// doctorRole: "patient"
+
+// ------------------------------------------------------------
+// L7.3 DELETE BOTH INVALID APPOINTMENTS
+// ------------------------------------------------------------
+
+// db.appointments.deleteMany({
+//   reason: {
+//     $in: [
+//       "L7a - missing doctor reference",
+//       "L7b - doctor points to patient",
+//     ],
+//   },
+// });
+
+// Result:
+// { acknowledged: true, deletedCount: 2 }
+
+// ============================================================
+// WRITTEN ANSWERS
+// ============================================================
+
+// ------------------------------------------------------------
+// 1. Why do L2 and L3 start from users?
+// ------------------------------------------------------------
+//
+// If we started from appointments, we would only see users
+// who already have at least one appointment. Dr. Sofia
+// Lindqvist and Eva Nilsson would disappear from the results.
+// Starting from users keeps them in the results, and $lookup
+// gives them an empty appointments array.
+
+// ------------------------------------------------------------
+// 2. Why can't the validator guarantee that doctorId belongs
+// to a doctor? How does L7(b) detect the problem?
+// ------------------------------------------------------------
+//
+// The validator can check that doctorId is an ObjectId, but
+// it cannot check the role of a document in another collection.
+// In L7(b), $lookup finds the referenced user and we check
+// whether that user's role is "patient". The application can
+// prevent this by checking that the selected user exists and
+// has the doctor role before creating an appointment.
+
+// ------------------------------------------------------------
+// 3. One advantage and one disadvantage of storing doctors
+// and patients in the same users collection.
+// ------------------------------------------------------------
+//
+// One advantage is that common information, such as name,
+// email and phone, is stored in one place. One disadvantage
+// is that relationships become more complicated because we
+// must check the role of a referenced user to know whether
+// that user is really a doctor or a patient.
+
+// ============================================================
+// END OF TASK 5 — RELATIONS WITH $LOOKUP
+// ============================================================
