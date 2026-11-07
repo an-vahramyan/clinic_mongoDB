@@ -1,0 +1,330 @@
+
+// ============================================================
+// TASK 4 — PART B: CRUD OPERATIONS
+// Name: Anush Vahramyan
+// Date: 2026-11-06
+// Database: clinic
+// File: 05_crud.mongodb
+//
+// IMPORTANT:
+// Run 04_seed.mongodb before running this file.
+// This file changes and deletes documents.
+// To repeat the tests, run the seed file again first.
+// ============================================================
+
+use("clinic");
+
+// ============================================================
+// R. READ OPERATIONS
+// ============================================================
+
+// R1 - All doctors
+db.users.find({ role: "doctor" });
+// Result: 3 documents
+
+// ============================================================
+
+// R2 - Active doctors
+db.users.find({ role: "doctor", active: true });
+// Result: 2 documents (Rossi, Karimi)
+
+// ============================================================
+
+// R3 - Patients without phone number
+db.users.find({
+  role: "patient",
+  phone: { $exists: false }
+});
+// Result: 1 document (Clara Meyer)
+
+// ============================================================
+
+// R4 - Patients allergic to penicillin
+db.users.find({
+  role: "patient",
+  "patient.allergies": "penicillin"
+});
+// Result: 1 document (Ana Costa)
+
+// ============================================================
+
+// R5 - Patients with no allergies recorded
+// Includes empty arrays and missing fields.
+db.users.find({
+  role: "patient",
+  $or: [
+    { "patient.allergies": { $exists: false } },
+    { "patient.allergies": { $size: 0 } }
+  ]
+});
+// Result: 2 documents (Ben Okoye, Eva Nilsson)
+
+// ============================================================
+
+// R6 - Patients born before 1990-01-01
+db.users.find({
+  role: "patient",
+  "patient.birthDate": {
+    $lt: new Date("1990-01-01T00:00:00Z")
+  }
+});
+// Result: 2 documents (Ana Costa, Dmitri Volkov)
+
+// ============================================================
+
+// R7 - Appointments in March 2025
+// Sort by start date, earliest first.
+db.appointments.find({
+  start: {
+    $gte: new Date("2025-03-01T00:00:00Z"),
+    $lt: new Date("2025-04-01T00:00:00Z")
+  }
+}).sort({ start: 1 });
+// Result: 5 documents
+// First: Blood pressure check
+
+// ============================================================
+
+// R8 - Completed appointments with fee between 80 and 130
+// Show only reason and fee.
+db.appointments.find(
+  {
+    status: "completed",
+    fee: { $gte: 80, $lte: 130 }
+  },
+  {
+    _id: 0,
+    reason: 1,
+    fee: 1
+  }
+);
+// Result: 3 documents
+
+// ============================================================
+
+// R9 - Count appointments containing "follow-up"
+// Case-insensitive.
+db.appointments.countDocuments({
+  reason: { $regex: "follow-up", $options: "i" }
+});
+// Result: 2
+
+// ============================================================
+
+// R10 - Appointment with atenolol prescription
+// Both conditions must match the same prescription.
+db.appointments.find({
+  prescriptions: {
+    $elemMatch: {
+      drug: "atenolol",
+      days: { $gte: 7 }
+    }
+  }
+});
+// Result: 1 document (Chest pain follow-up)
+
+// ============================================================
+// U. UPDATE OPERATIONS
+// ============================================================
+
+// U1 - Reactivate Dr. Sofia Lindqvist
+db.users.updateOne(
+  { email: "sofia.lindqvist@clinic.test" },
+  { $set: { active: true } }
+);
+// Result: matchedCount: 1, modifiedCount: 1
+
+// ============================================================
+
+// U2 - Increase fee of every scheduled appointment by 10
+db.appointments.updateMany(
+  { status: "scheduled" },
+  { $inc: { fee: 10 } }
+);
+// Result: matchedCount: 3, modifiedCount: 3
+
+// ============================================================
+
+// U3 - Add latex allergy to Ben Okoye without duplicates
+db.users.updateOne(
+  { email: "ben.okoye@example.com" },
+  { $addToSet: { "patient.allergies": "latex" } }
+);
+// First execution:
+// Result: matchedCount: 1, modifiedCount: 1
+
+// Repeat the same operation
+db.users.updateOne(
+  { email: "ben.okoye@example.com" },
+  { $addToSet: { "patient.allergies": "latex" } }
+);
+// Second execution:
+// Result: matchedCount: 1, modifiedCount: 0
+
+// ============================================================
+
+// U4 - Cancel appointment "Palpitations"
+db.appointments.updateOne(
+  { reason: "Palpitations" },
+  {
+    $set: {
+      status: "cancelled",
+      fee: 0
+    }
+  }
+);
+// Result: matchedCount: 1, modifiedCount: 1
+
+// ============================================================
+
+// U5 - Add amlodipine prescription to Blood pressure check
+db.appointments.updateOne(
+  { reason: "Blood pressure check" },
+  {
+    $push: {
+      prescriptions: {
+        drug: "amlodipine",
+        dose: "5mg",
+        days: 30
+      }
+    }
+  }
+);
+// Result: matchedCount: 1, modifiedCount: 1
+// The appointment now has 1 prescription.
+
+// ============================================================
+
+// U6 - Upsert Felix Brandt
+db.users.updateOne(
+  { email: "felix.brandt@example.com" },
+  {
+    $set: {
+      name: "Felix Brandt",
+      email: "felix.brandt@example.com",
+      role: "patient",
+      active: true,
+      "patient.birthDate": new Date("1995-01-01T00:00:00Z")
+    }
+  },
+  { upsert: true }
+);
+// Result: matchedCount: 0, modifiedCount: 0
+// upsertedId: ObjectId(...)
+// Users count after upsert: 10
+
+// ============================================================
+
+// U7 - Try to assign an invalid role
+db.users.updateOne(
+  { email: "ben.okoye@example.com" },
+  { $set: { role: "superuser" } }
+);
+// Expected: Document failed validation
+// Result: Plan executor error during update
+// caused by: Document failed validation
+
+// ============================================================
+
+// Counts after updates
+db.users.countDocuments();
+// Result: 10
+
+db.appointments.countDocuments();
+// Result: 9
+
+// ============================================================
+// D. DELETE OPERATIONS
+// ============================================================
+
+// D1 - Delete Felix Brandt
+db.users.deleteOne({
+  email: "felix.brandt@example.com"
+});
+// Result: acknowledged: true, deletedCount: 1
+
+// ============================================================
+
+// D2 - Delete all cancelled appointments
+db.appointments.deleteMany({
+  status: "cancelled"
+});
+// Result: acknowledged: true, deletedCount: 2
+
+// ============================================================
+
+// D3 - Delete Ana Costa and her dependent appointments
+
+// First, find Ana's document and retrieve her _id
+const anaDoc = db.users.findOne(
+  { email: "ana.costa@example.com" },
+  { _id: 1 }
+);
+printjson(anaDoc);
+// Result: Ana's _id:
+// ObjectId('6aedef100f08e7aaac8a4c6c')
+
+// Find all appointments referencing Ana
+const anaAppointments = db.appointments.find(
+  { patientId: anaDoc._id },
+  { _id: 1, reason: 1 }
+).toArray();
+
+printjson(anaAppointments);
+// Result: 3 appointments
+// Chest pain follow-up
+// Blood pressure check
+// Test results
+
+// Delete Ana's appointments first
+const deleteAnaAppointments = db.appointments.deleteMany({
+  patientId: anaDoc._id
+});
+
+printjson(deleteAnaAppointments);
+// Result: acknowledged: true, deletedCount: 3
+
+// Then delete Ana
+const deleteAna = db.users.deleteOne({
+  _id: anaDoc._id
+});
+
+printjson(deleteAna);
+// Result: acknowledged: true, deletedCount: 1
+
+// ============================================================
+// FINAL COUNTS
+// ============================================================
+
+db.users.countDocuments();
+// Result: 8
+
+db.appointments.countDocuments();
+// Result: 4
+
+// ============================================================
+// WRITTEN ANSWERS
+// ============================================================
+
+// 1. Why does the deletion order in D3 matter?
+// Appointments store the patient's _id in patientId.
+// We must delete the appointments first and then the patient.
+// If we delete the patient first, the appointments will remain
+// with a patientId that points to a user that no longer exists.
+// MongoDB does not delete these related documents automatically.
+
+// 2. Why do we use $elemMatch in R10?
+// We use $elemMatch because both conditions must match the same
+// prescription. For example, an appointment could have:
+// prescriptions: [
+//   { drug: "atenolol", days: 3 },
+//   { drug: "paracetamol", days: 30 }
+// ]
+// Separate dot-notation conditions could match this document:
+// one prescription has atenolol and another has 30 days.
+// But $elemMatch will not match it because no single prescription
+// has atenolol and at least 7 days.
+
+// ============================================================
+// END OF TASK 4 — PART B
+// ============================================================

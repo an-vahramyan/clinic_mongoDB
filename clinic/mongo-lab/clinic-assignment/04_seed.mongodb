@@ -1,0 +1,329 @@
+// ============================================================
+// TASK 4 — PART A: SEED DATA
+// Name: Anush Vahramyan
+// Date: 2026-11-06
+// Database: clinic
+// File: 04_seed.mongodb
+// ============================================================
+
+// ============================================================
+// 0. DATABASE CONFIGURATION
+// ============================================================
+
+use("clinic");
+
+// ============================================================
+// 1. COLLECTION CLEANUP
+// Remove existing documents while preserving collections
+// and their validators.
+// ============================================================
+
+db.users.deleteMany({});
+// Result:
+// { acknowledged: true, deletedCount: 0 }
+
+db.appointments.deleteMany({});
+// Result:
+// { acknowledged: true, deletedCount: 0 }
+
+// ============================================================
+// 2. SEED USERS
+// Insert 9 users: 3 doctors, 5 patients, 1 admin.
+// ============================================================
+
+var insertResult = db.users.insertMany([
+  // ----------------------------------------------------------
+  // 2.1 DOCTORS
+  // ----------------------------------------------------------
+
+  {
+    name: "Dr. Elena Rossi",
+    email: "elena.rossi@clinic.test",
+    phone: "555-0201",
+    role: "doctor",
+    active: true,
+    doctor: {
+      licenseNo: "MD-1001",
+      specialty: "cardiology",
+    },
+  },
+
+  {
+    name: "Dr. Hamid Karimi",
+    email: "hamid.karimi@clinic.test",
+    phone: "555-0202",
+    role: "doctor",
+    active: true,
+    doctor: {
+      licenseNo: "MD-1002",
+      specialty: "pediatrics",
+    },
+  },
+
+  {
+    name: "Dr. Sofia Lindqvist",
+    email: "sofia.lindqvist@clinic.test",
+    role: "doctor",
+    active: false,
+    doctor: {
+      licenseNo: "MD-1003",
+      specialty: "dermatology",
+    },
+  },
+
+  // ----------------------------------------------------------
+  // 2.2 PATIENTS
+  // ----------------------------------------------------------
+
+  {
+    name: "Ana Costa",
+    email: "ana.costa@example.com",
+    phone: "555-0301",
+    role: "patient",
+    active: true,
+    patient: {
+      birthDate: new Date("1985-04-12T00:00:00Z"),
+      allergies: ["penicillin"],
+      bloodType: "A+",
+    },
+  },
+
+  {
+    name: "Ben Okoye",
+    email: "ben.okoye@example.com",
+    phone: "555-0302",
+    role: "patient",
+    active: true,
+    patient: {
+      birthDate: new Date("1990-11-02T00:00:00Z"),
+      allergies: [],
+      bloodType: "O-",
+    },
+  },
+
+  {
+    name: "Clara Meyer",
+    email: "clara.meyer@example.com",
+    role: "patient",
+    active: true,
+    patient: {
+      birthDate: new Date("2015-06-30T00:00:00Z"),
+      allergies: ["peanuts", "latex"],
+      bloodType: "B+",
+    },
+  },
+
+  {
+    name: "Dmitri Volkov",
+    email: "dmitri.volkov@example.com",
+    phone: "555-0304",
+    role: "patient",
+    active: true,
+    patient: {
+      birthDate: new Date("1972-02-19T00:00:00Z"),
+      allergies: ["sulfa"],
+    },
+  },
+
+  {
+    name: "Eva Nilsson",
+    email: "eva.nilsson@example.com",
+    phone: "555-0305",
+    role: "patient",
+    active: true,
+    patient: {
+      birthDate: new Date("1998-09-05T00:00:00Z"),
+      bloodType: "AB+",
+    },
+  },
+
+  // ----------------------------------------------------------
+  // 2.3 ADMIN
+  // ----------------------------------------------------------
+
+  {
+    name: "Maya Admin",
+    email: "maya@clinic.test",
+    phone: "555-0100",
+    role: "admin",
+    active: true,
+  },
+]);
+
+// Print inserted user IDs:
+// printjson(insertResult.insertedIds);
+
+// Result:
+// acknowledged: true
+// insertedIds: { 0: ObjectId(...), ..., 8: ObjectId(...) }
+
+// ============================================================
+// 3. VERIFY USERS
+// ============================================================
+
+db.users.countDocuments();
+// Result: 9
+
+// ============================================================
+// 4. GET ELENA AND ANA IDs
+// Use generated IDs for appointment references.
+// ============================================================
+
+print(insertResult.insertedIds[0]);
+// Result:
+// ObjectId('...') — Dr. Elena Rossi
+
+print(insertResult.insertedIds[3]);
+// Result:
+// ObjectId('...') — Ana Costa
+
+// ============================================================
+// 5. SEED APPOINTMENTS
+// Insert 9 appointments using the ObjectIds returned
+// from the users insertion above.
+// IMPORTANT:
+// - Do not hardcode ObjectIds.
+// - Use insertResult.insertedIds[index].
+// - doctorId and patientId must be BSON ObjectIds.
+// ============================================================
+
+var appointmentsResult = db.appointments.insertMany([
+  // ----------------------------------------------------------
+  // 5.1 APPOINTMENTS
+  // ----------------------------------------------------------
+
+  // A1 — Chest pain follow-up
+  {
+    doctorId: insertResult.insertedIds[0],
+    patientId: insertResult.insertedIds[3],
+    start: new Date("2025-02-03T09:00:00Z"),
+    durationMin: 30,
+    reason: "Chest pain follow-up",
+    status: "completed",
+    fee: 120,
+    prescriptions: [
+      {
+        drug: "atenolol",
+        dose: "25mg",
+        days: 30,
+      },
+    ],
+  },
+
+  // A2 — ECG
+  {
+    doctorId: insertResult.insertedIds[0],
+    patientId: insertResult.insertedIds[6],
+    start: new Date("2025-02-03T10:00:00Z"),
+    durationMin: 45,
+    reason: "ECG",
+    status: "completed",
+    fee: 150,
+  },
+
+  // A3 — Fever
+  {
+    doctorId: insertResult.insertedIds[1],
+    patientId: insertResult.insertedIds[5],
+    start: new Date("2025-02-05T14:00:00Z"),
+    durationMin: 30,
+    reason: "Fever",
+    status: "completed",
+    fee: 80,
+    prescriptions: [
+      {
+        drug: "paracetamol",
+        dose: "250mg",
+        days: 3,
+      },
+    ],
+  },
+
+  // A4 — Blood pressure check
+  {
+    doctorId: insertResult.insertedIds[0],
+    patientId: insertResult.insertedIds[3],
+    start: new Date("2025-03-10T09:30:00Z"),
+    durationMin: 30,
+    reason: "Blood pressure check",
+    status: "completed",
+    fee: 90,
+  },
+
+  // A5 — Vaccination
+  {
+    doctorId: insertResult.insertedIds[1],
+    patientId: insertResult.insertedIds[4],
+    start: new Date("2025-03-12T11:00:00Z"),
+    durationMin: 20,
+    reason: "Vaccination",
+    status: "completed",
+    fee: 60,
+  },
+
+  // A6 — Palpitations
+  {
+    doctorId: insertResult.insertedIds[0],
+    patientId: insertResult.insertedIds[4],
+    start: new Date("2025-03-20T16:00:00Z"),
+    durationMin: 30,
+    reason: "Palpitations",
+    status: "scheduled",
+    fee: 100,
+  },
+
+  // A7 — Follow-up
+  {
+    doctorId: insertResult.insertedIds[1],
+    patientId: insertResult.insertedIds[5],
+    start: new Date("2025-03-25T14:00:00Z"),
+    durationMin: 30,
+    reason: "Follow-up",
+    status: "scheduled",
+    fee: 70,
+  },
+
+  // A8 — Stress test
+  {
+    doctorId: insertResult.insertedIds[0],
+    patientId: insertResult.insertedIds[6],
+    start: new Date("2025-03-28T09:00:00Z"),
+    durationMin: 30,
+    reason: "Stress test",
+    status: "cancelled",
+    fee: 0,
+  },
+
+  // A9 — Test results
+  {
+    doctorId: insertResult.insertedIds[0],
+    patientId: insertResult.insertedIds[3],
+    start: new Date("2025-04-02T10:00:00Z"),
+    durationMin: 30,
+    reason: "Test results",
+    status: "scheduled",
+    fee: 90,
+  },
+]);
+
+// ============================================================
+// 6. VERIFY APPOINTMENTS
+// ============================================================
+
+db.appointments.countDocuments();
+// Result: 9
+
+// ============================================================
+// 7. FINAL VERIFICATION
+// Expected:
+// - 9 users
+// - 9 appointments
+// ============================================================
+
+print("Users:");
+print(db.users.countDocuments());
+// Result: 9
+
+print("Appointments:");
+print(db.appointments.countDocuments());
+// Result: 9

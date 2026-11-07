@@ -339,22 +339,22 @@ use("clinic");
 // ------------------------------------------------------------
 
 // Helper function: capture validation errors
-function testInvalidInsert(testName, insertOperation) {
-  try {
-    insertOperation();
+// function testInvalidInsert(testName, insertOperation) {
+//   try {
+//     insertOperation();
 
-    return {
-      test: testName,
-      result: "Document unexpectedly accepted",
-    };
-  } catch (error) {
-    return {
-      test: testName,
-      result: "Validation rejected the document",
-      error: error.message,
-    };
-  }
-}
+//     return {
+//       test: testName,
+//       result: "Document unexpectedly accepted",
+//     };
+//   } catch (error) {
+//     return {
+//       test: testName,
+//       result: "Validation rejected the document",
+//       error: error.message,
+//     };
+//   }
+// }
 
 // ------------------------------------------------------------
 // REQUIRED 10 TESTS FROM THE ASSIGNMENT
